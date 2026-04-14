@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Fabio Chess</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1 class="brand">Fabio</h1>
+    <p class="tagline">Chess</p>
+  </header>
+
+  <main>
+    <div id="status-bar">
+      <div id="player-black" class="player-info">
+        <span class="piece-icon">&#9818;</span>
+        <span class="player-label">Black</span>
+        <div id="captured-by-black" class="captured"></div>
+      </div>
+      <div id="turn-indicator">White's turn</div>
+      <div id="player-white" class="player-info">
+        <span class="piece-icon">&#9812;</span>
+        <span class="player-label">White</span>
+        <div id="captured-by-white" class="captured"></div>
+      </div>
+    </div>
+
+    <div id="board-container">
+      <div id="board"></div>
+    </div>
+
+    <div id="promotion-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>Promote Pawn</h2>
+        <div id="promotion-choices"></div>
+      </div>
+    </div>
+
+    <div id="game-over-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2 id="game-over-title"></h2>
+        <p id="game-over-message"></p>
+        <button id="new-game-btn">New Game</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="reset-btn">New Game</button>
+      <button id="undo-btn">Undo</button>
+    </div>
+  </main>
+
+  <script src="chess.js"></script>
+</body>
+</html>

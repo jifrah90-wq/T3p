@@ -125,5 +125,17 @@ def test_walk_forward_picks_a_configuration_from_the_grid():
         assert f.params["atr_stop_mult"] in (2.0, 3.0)
 
 
+def test_funding_carry_refuses_validation_instead_of_faking_a_verdict():
+    """An untested strategy must not be reported as a tested failure.
+
+    funding_carry abstains on every bar without a funding series, and the
+    venue serves no history for one. Silently returning "no edge" would be a
+    wrong answer dressed as a measurement.
+    """
+    frames = {"S": make_frame(np.full(3000, 100.0))}
+    with pytest.raises(ValueError, match="no historical funding series"):
+        walk_forward(make_config(), frames, "funding_carry", folds=3)
+
+
 def test_report_renders_without_folds():
     assert "not enough history" in WalkForwardResult([], "s").verdict()

@@ -23,6 +23,7 @@ import pandas as pd
 from .backtest import Backtester
 from .config import Config
 from .strategies import build_strategy
+from .strategies.funding_carry import FundingCarry
 
 log = logging.getLogger(__name__)
 
@@ -146,6 +147,18 @@ def walk_forward(
     Folds are anchored and rolling forward, never overlapping train and test,
     so no fold is ever scored on data its parameters saw.
     """
+    if strategy_name == FundingCarry.name:
+        # Refuse rather than quietly report "no edge". This strategy trades on
+        # funding, and Hyperliquid serves no per-asset historical funding
+        # series -- so every bar would abstain and the run would look like a
+        # tested failure instead of an untested strategy. A validator that
+        # cannot tell those apart is worse than no validator.
+        raise ValueError(
+            "funding_carry cannot be validated out of sample: the venue serves "
+            "no historical funding series, so there is nothing to backtest it "
+            "against. Evaluate it by paper trading instead."
+        )
+
     combos = expand_grid(grid or {})
     timeline = sorted(set().union(*(df.index for df in frames.values())))
     n = len(timeline)

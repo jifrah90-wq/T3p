@@ -44,6 +44,10 @@ out-of-sample, that is a good outcome. It is not a 10x in a month.
 | backtest, 200 days, 18 symbols | **+35.0%**, Sharpe 1.40, 49 trades |
 | **walk-forward `trend_breakout`, 3 folds** | **-10.9% mean OOS, 0/3 folds profitable, 26.1% overfit gap** |
 | **walk-forward `momentum`, 3 folds** | **-4.9% mean OOS, 1/3 folds profitable, 21.4% overfit gap** |
+| **walk-forward `mean_reversion`, 3 folds** | **-6.8% mean OOS, 0/3 folds profitable, 4.4% overfit gap** |
+
+All three testable strategies fail out of sample. (`funding_carry` is the
+fourth; it cannot be validated on history at all — see below.)
 
 The +35% row is the one that would tempt you. Ignore it. Walk-forward tuned
 parameters on each fold's training window and scored that choice on the window
@@ -56,8 +60,15 @@ Momentum matters most here: it contributed **+$3,030 of the +$3,504** in the
 of sample it loses money. That single comparison is the best argument in this
 repo for not trusting a backtest.
 
-The verdict the tool printed for both was "no edge. Do not trade this," and I
-agree with it.
+`mean_reversion` fails differently, and the distinction is worth understanding.
+Its overfit gap is only 4.4% — it is *not* fitted to history. It loses roughly
+as much in sample as out. That is an honestly bad strategy rather than a
+flattering one, and it is the easier of the two problems: a strategy that is
+consistently wrong may just have its sign or its regime filter backwards,
+whereas one with a 26% overfit gap is telling you the search itself is broken.
+
+The verdict the tool printed for all three was "no edge. Do not trade this,"
+and I agree with it.
 
 The swing between -15% and +35% depending on which symbols and window you pick
 is itself the finding: results that unstable are noise, and a headline backtest

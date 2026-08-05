@@ -64,6 +64,9 @@ python -m hltrader.cli --network mainnet scan
 # Does the strategy make money on history? (fees, slippage and funding included)
 python -m hltrader.cli --network mainnet backtest --days 180
 
+# Does the edge survive on data it was never tuned on? The important one.
+python -m hltrader.cli --network mainnet walkforward trend_breakout --sweep
+
 # Trade it on live prices with simulated fills. No keys needed, no risk.
 python -m hltrader.cli --network mainnet paper
 
@@ -168,22 +171,49 @@ and target.
 
 ## Finding an edge
 
-The infrastructure is sound; the default parameters are not yet profitable. If
-you want to pursue this seriously:
+The infrastructure is sound; the default parameters are not yet profitable.
+The tool for this is `walkforward`, and it is the most useful command here:
 
-1. **Backtest over multiple regimes**, not one. A parameter set tuned on 120
-   days of one market is fitted to that market.
-2. **Hold out data.** Tune on one period, verify on a period you never looked
-   at. If it only works on the tuning period, it doesn't work.
-3. **Change one thing at a time** and re-run. Compound changes tell you nothing
-   about which one mattered.
-4. **Watch trade count.** A strategy with 12 trades that "works" hasn't shown
-   you anything — that's noise.
+```bash
+python -m hltrader.cli --network mainnet walkforward trend_breakout \
+    --days 300 --folds 4 --sweep
+```
+
+It splits history into folds, tunes parameters on each fold's *training*
+window, then scores that choice on the window immediately after — data the
+tuning never saw. It reports the out-of-sample return, how many folds were
+profitable, and the **overfit gap** (how much better training looked than
+reality), then gives a blunt verdict.
+
+This is deliberately harder to pass than a backtest. Sweeping parameters over
+your whole history and picking the winner does not find an edge — any large
+enough grid contains a configuration that looks excellent on any dataset,
+including pure noise. Walk-forward asks the only question that matters: if you
+had tuned on data available at the time, would it have held up on what came
+next?
+
+Rules of thumb when using it:
+
+1. **Keep grids small.** A big grid guarantees a good-looking winner.
+2. **Watch the trade count.** A fold with 12 trades has told you nothing.
+3. **Prefer consistency over magnitude.** Four modestly profitable folds beat
+   one spectacular one and three losers — that pattern is noise, and the
+   verdict will say so.
+4. **Change one thing at a time.** Compound changes tell you nothing about
+   which one mattered.
 5. **Paper trade before funding.** Live slippage and fills differ from any
    model, including this one's.
 
 The honest baseline: most systematic retail crypto strategies do not survive
-step 2. Finding out cheaply is the point of the backtester.
+walk-forward. Finding that out for free is the entire point.
+
+### A note on speed
+
+The backtester re-evaluates strategies bar by bar over a rolling window rather
+than precomputing indicators across the whole history. That is meaningfully
+slower — a 200-day run over 18 symbols takes minutes — and it is a deliberate
+trade: it guarantees the strategy sees exactly what the live runner will hand
+it. If you need faster sweeps, cut the symbol list rather than the realism.
 
 ## Configuration
 

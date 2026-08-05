@@ -127,6 +127,73 @@ def cmd_backtest(cfg: Config, args) -> int:
     return 0
 
 
+# Grids kept deliberately small. A big grid guarantees something looks good
+# on any dataset, which is the failure this command exists to expose.
+SWEEP_GRIDS: dict[str, dict[str, list]] = {
+    "trend_breakout": {
+        "entry_window": [20, 40, 80],
+        "atr_stop_mult": [2.0, 3.0],
+        "min_adx": [15, 25],
+    },
+    "mean_reversion": {
+        "entry_z": [1.5, 2.0, 2.5],
+        "atr_stop_mult": [1.5, 2.5],
+        "max_adx": [20, 30],
+    },
+    "momentum": {
+        "lookback": [72, 168, 336],
+        "top_fraction": [0.15, 0.3],
+    },
+    "funding_carry": {
+        "min_hourly_funding": [0.0001, 0.0002],
+        "trend_window": [50, 100],
+    },
+}
+
+
+def cmd_walkforward(cfg: Config, args) -> int:
+    from .validation import walk_forward
+
+    market = MarketData(cfg.base_url, cache_dir=Path(cfg.state_dir) / "cache")
+    symbols = args.symbols or market.select_universe(
+        min_volume_usd=cfg.universe.min_daily_volume_usd,
+        min_open_interest_usd=cfg.universe.min_open_interest_usd,
+        max_symbols=cfg.universe.max_symbols,
+        blacklist=cfg.universe.blacklist,
+        whitelist=cfg.universe.whitelist,
+    )
+    bars = int(args.days * 86_400_000 / INTERVAL_MS[cfg.interval])
+
+    print(f"loading {bars} x {cfg.interval} bars for {len(symbols)} symbols...")
+    frames = {}
+    for symbol in symbols:
+        try:
+            df = market.candles(symbol, cfg.interval, bars, use_cache=True)
+        except Exception as exc:
+            print(f"  skip {symbol}: {exc}")
+            continue
+        if len(df) > 200:
+            frames[symbol] = df
+    if not frames:
+        print("no usable history")
+        return 1
+
+    grid = SWEEP_GRIDS.get(args.strategy, {}) if args.sweep else {}
+    combos = len(list(__import__("itertools").product(*grid.values()))) if grid else 1
+    print(f"{args.folds} folds x {combos} parameter set(s) on {len(frames)} symbols\n")
+
+    try:
+        result = walk_forward(
+            cfg, frames, args.strategy, grid, folds=args.folds, train_frac=args.train_frac
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    print(result.report())
+    return 0
+
+
 def cmd_paper(cfg: Config, args) -> int:
     cfg.execution.dry_run = True
     Runner(cfg).run(max_cycles=args.cycles)
@@ -205,6 +272,21 @@ def build_parser() -> argparse.ArgumentParser:
     bt.add_argument("--no-cache", action="store_true")
     bt.add_argument("--include-funding", action="store_true", default=True)
     bt.set_defaults(func=cmd_backtest)
+
+    wf = sub.add_parser(
+        "walkforward", help="out-of-sample validation -- does the edge survive?"
+    )
+    wf.add_argument("strategy", choices=sorted(SWEEP_GRIDS))
+    wf.add_argument("--days", type=float, default=300)
+    wf.add_argument("--folds", type=int, default=4)
+    wf.add_argument("--train-frac", type=float, default=0.6)
+    wf.add_argument("--symbols", nargs="*")
+    wf.add_argument(
+        "--sweep",
+        action="store_true",
+        help="tune parameters on each training window before testing",
+    )
+    wf.set_defaults(func=cmd_walkforward)
 
     paper = sub.add_parser("paper", help="trade on live data with simulated fills")
     paper.add_argument("--cycles", type=int, default=None)

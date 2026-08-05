@@ -1,0 +1,81 @@
+# hltrader configuration.
+#
+# Secrets never live here. HL_SECRET_KEY and HL_ACCOUNT_ADDRESS come from the
+# environment; see .env.example.
+
+network: testnet          # start here. switch to mainnet only after paper trading.
+account_address: ""       # your Hyperliquid account (the master wallet address)
+
+interval: 1h
+lookback_bars: 1200
+poll_seconds: 300
+state_dir: state
+log_level: INFO
+
+starting_equity: 10000
+taker_fee: 0.00045
+maker_fee: 0.00015
+
+risk:
+  risk_per_trade: 0.01          # 1% of equity lost if a stop is hit
+  max_position_leverage: 2.5
+  max_gross_leverage: 4.0
+  max_net_leverage: 2.5
+  max_concurrent_positions: 6
+  venue_leverage: 5
+  daily_loss_limit: 0.06        # stop trading for the UTC day past -6%
+  max_drawdown_limit: 0.20      # hard stop, needs a human to clear
+  min_order_notional: 12.0
+  max_slippage: 0.004
+
+universe:
+  min_daily_volume_usd: 5000000
+  min_open_interest_usd: 1000000
+  max_symbols: 40
+  include_spot: false
+  blacklist: []
+  whitelist: [BTC, ETH, SOL]
+
+execution:
+  order_style: ioc
+  order_timeout_s: 20
+  use_exchange_stops: true
+  dry_run: true                 # set HL_LIVE=1 or use `hltrader live` to trade
+
+strategies:
+  - name: trend_breakout
+    weight: 1.0
+    enabled: true
+    params:
+      entry_window: 40
+      exit_window: 20
+      trend_fast: 50
+      trend_slow: 200
+      atr_stop_mult: 2.5
+      atr_target_mult: 6.0
+      min_adx: 20
+
+  - name: momentum
+    weight: 0.8
+    enabled: true
+    params:
+      lookback: 168
+      skip_recent: 12
+      top_fraction: 0.2
+      atr_stop_mult: 3.0
+
+  - name: mean_reversion
+    weight: 0.6
+    enabled: true
+    params:
+      z_window: 48
+      entry_z: 2.0
+      max_adx: 25
+      atr_stop_mult: 2.0
+
+  - name: funding_carry
+    weight: 0.4
+    enabled: false              # enable once you have paper-traded the rest
+    params:
+      min_hourly_funding: 0.00015
+      trend_window: 100

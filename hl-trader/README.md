@@ -82,6 +82,30 @@ This is the most useful thing in this README. A negative result that closes off
 a line of enquiry is worth more than another backtest that looks encouraging,
 and it took about twenty minutes rather than a funded month.
 
+### The trap one level up
+
+Five walk-forward tests have now been run in this repo. That number matters,
+and it is the thing to be most careful about from here.
+
+Walk-forward protects against overfitting *parameters*. It does **not** protect
+against overfitting your *choice of strategy*. If you test twenty strategies
+and one passes, you have not found an edge — you have run twenty coin-flip
+experiments and reported the winner. The selection bias that walk-forward
+removes from the inner loop comes straight back in the outer one.
+
+So before trusting anything that passes:
+
+- **Count every test you ran**, including the ones you abandoned. A result at
+  p < 0.05 means nothing after twenty attempts.
+- **Demand a reason it should work** that you believed *before* you saw the
+  result — a structural feature of the market, not a story fitted afterwards.
+- **Re-test the winner on symbols and a period you have never touched.**
+- **Then paper trade it**, and expect it to be worse than the test said.
+
+The four strategies here all failed, which at least means nothing was cherry
+picked. If you add a fifth and it passes, be suspicious of it precisely
+*because* it is the fifth.
+
 The verdict the tool printed for all three was "no edge. Do not trade this,"
 and I agree with it.
 

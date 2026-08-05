@@ -36,15 +36,33 @@ What this system *is* built to do is trade a real edge with controlled
 downside, survive its losing streaks, and compound. If the strategies work
 out-of-sample, that is a good outcome. It is not a 10x in a month.
 
-**Backtested performance is currently negative.** On the last 120 days of
-mainnet hourly data across the liquid universe, the default configuration lost
-money — the trend-breakout book in particular. The risk controls worked exactly
-as designed (the drawdown halt fired and stopped the bleeding at -20%), which
-is the part I can vouch for. The alpha is not yet there. Do not run this live
-until you have found a configuration that survives out-of-sample testing, and
-understand that "found by tuning until the backtest looks good" is how you
-build a system that loses money live with great confidence. See
-[Finding an edge](#finding-an-edge).
+**And the strategies do not currently have an edge.** Measured, not assumed:
+
+| run | result |
+|---|---|
+| 120 days, 6 symbols | **-15.3%**, 74 trades |
+| 200 days, 18 symbols | **+35.0%**, Sharpe 1.40, 49 trades |
+| **walk-forward, 3 folds, out of sample** | **-10.9% mean, 0 of 3 folds profitable** |
+
+The middle row is the one that would tempt you. Ignore it. The walk-forward run
+tuned parameters on each fold's training window and then scored that choice on
+the window immediately after — and fold 0 trained to **+65.8%** and delivered
+**-1.4%**. Mean overfit gap: **26.1%**. That is the signature of curve fitting,
+not alpha. The verdict the tool printed was "no edge. Do not trade this," and I
+agree with it.
+
+The swing between -15% and +35% depending on which symbols and window you pick
+is itself the finding: results that unstable are noise, and a headline backtest
+number is not evidence of anything.
+
+What I can vouch for is the risk machinery. In every losing run the drawdown
+halt fired and stopped the bleeding at roughly -20%, exactly as configured. The
+plumbing works. The alpha is not there yet.
+
+One modelling caveat worth knowing: the backtester holds each asset's *current*
+funding rate flat across all history, because the venue does not serve a full
+per-asset funding time series. In the 200-day run funding contributed +$400 of
+the +$3,504, so that row is softer than it looks.
 
 ---
 

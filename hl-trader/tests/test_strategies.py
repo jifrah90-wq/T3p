@@ -186,3 +186,43 @@ def _describe(signal):
     if signal is None:
         return None
     return (round(signal.direction, 9), round(signal.stop_distance, 9))
+
+
+# -- inversion ------------------------------------------------------------
+
+
+def test_inverted_flips_the_direction(uptrend):
+    inner = TrendBreakout()
+    original = inner.generate("X", uptrend)
+    flipped = build_strategy("inverted_trend_breakout").generate("X", uptrend)
+    assert original is not None and flipped is not None
+    assert flipped.direction == pytest.approx(-original.direction)
+
+
+def test_inverted_keeps_the_stop_distance(uptrend):
+    """Risk sizing must not change just because the side did."""
+    original = TrendBreakout().generate("X", uptrend)
+    flipped = build_strategy("trend_breakout", invert=True).generate("X", uptrend)
+    assert flipped.stop_distance == pytest.approx(original.stop_distance)
+
+
+def test_inverted_drops_the_target(uptrend):
+    """The original target pointed the other way; carrying it over is a bug."""
+    assert build_strategy("inverted_trend_breakout").generate("X", uptrend).target_distance is None
+
+
+def test_inverted_abstains_wherever_the_inner_strategy_does():
+    short = make_frame(np.full(50, 100.0))
+    assert build_strategy("inverted_trend_breakout").generate("X", short) is None
+
+
+def test_inverted_forwards_hooks_the_runner_depends_on():
+    """rank_universe and set_funding must survive the wrapper."""
+    wrapped = build_strategy("inverted_momentum")
+    frames = {f"S{i}": make_frame(np.linspace(100, 100 + i * 20, 600)) for i in range(10)}
+    wrapped.rank_universe(frames)  # would raise if not forwarded
+    assert build_strategy("inverted_funding_carry").warmup_bars > 0
+
+
+def test_inverted_reports_a_distinguishable_name():
+    assert build_strategy("inverted_mean_reversion").name == "inverted_mean_reversion"

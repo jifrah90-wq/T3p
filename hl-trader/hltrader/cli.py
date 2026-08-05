@@ -184,7 +184,13 @@ def cmd_walkforward(cfg: Config, args) -> int:
 
     try:
         result = walk_forward(
-            cfg, frames, args.strategy, grid, folds=args.folds, train_frac=args.train_frac
+            cfg,
+            frames,
+            args.strategy,
+            grid,
+            folds=args.folds,
+            train_frac=args.train_frac,
+            invert=args.invert,
         )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -281,6 +287,11 @@ def build_parser() -> argparse.ArgumentParser:
     wf.add_argument("--folds", type=int, default=4)
     wf.add_argument("--train-frac", type=float, default=0.6)
     wf.add_argument("--symbols", nargs="*")
+    wf.add_argument(
+        "--invert",
+        action="store_true",
+        help="take the opposite side of every signal (diagnoses a backwards edge)",
+    )
     wf.add_argument(
         "--sweep",
         action="store_true",

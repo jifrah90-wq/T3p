@@ -28,7 +28,6 @@ from .config import Config
 from .portfolio import Portfolio
 from .risk import RiskManager
 from .strategies import Strategy
-from .strategies.momentum import CrossSectionalMomentum
 
 log = logging.getLogger(__name__)
 
@@ -193,7 +192,9 @@ class Backtester:
     ) -> list:
         # Cross-sectional strategies need the whole universe scored first.
         for strategy, _ in self.strategies:
-            if isinstance(strategy, CrossSectionalMomentum):
+            # hasattr, not isinstance: a strategy may be wrapped (e.g. by
+            # Inverted), and the wrapper forwards these through.
+            if hasattr(strategy, "rank_universe"):
                 strategy.rank_universe(history)
             elif hasattr(strategy, "set_funding") and funding:
                 strategy.set_funding(

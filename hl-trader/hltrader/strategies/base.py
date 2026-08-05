@@ -64,3 +64,46 @@ class Strategy(ABC):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.params})"
+
+
+class Inverted(Strategy):
+    """Takes the opposite side of whatever the wrapped strategy wants.
+
+    Useful for a specific diagnosis. A strategy that loses steadily both in
+    and out of sample -- a *low* overfit gap with a negative return -- is not
+    fitting noise; it is reading a real signal backwards. Inverting it tests
+    that directly.
+
+    The result is not symmetric with the original: costs are paid either way,
+    so flipping a -7% strategy yields materially less than +7%. If the inverse
+    does not clear that hurdle, the original was just noise after all.
+    """
+
+    def __init__(self, inner: Strategy):
+        self.inner = inner
+        self.name = f"inverted_{inner.name}"
+        self.warmup_bars = inner.warmup_bars
+        self.params = dict(inner.params)
+
+    def generate(self, symbol: str, df: pd.DataFrame) -> Signal | None:
+        signal = self.inner.generate(symbol, df)
+        if signal is None:
+            return None
+        return Signal(
+            symbol=signal.symbol,
+            direction=-signal.direction,
+            stop_distance=signal.stop_distance,
+            # The original target was measured toward the opposite side, so it
+            # is meaningless here. Let the stop and exit rules do the work.
+            target_distance=None,
+            reason=f"inverted: {signal.reason}",
+            meta=signal.meta,
+        )
+
+    def __getattr__(self, item):
+        # Forward rank_universe / set_funding and anything else the runner
+        # reaches for on the wrapped strategy.
+        return getattr(self.inner, item)
+
+    def __repr__(self) -> str:
+        return f"Inverted({self.inner!r})"

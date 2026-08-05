@@ -28,8 +28,6 @@ from .portfolio import Portfolio
 from .risk import RiskManager, SizedOrder
 from .state import RunState, StateStore, TradeLog
 from .strategies import Strategy, build_strategy
-from .strategies.funding_carry import FundingCarry
-from .strategies.momentum import CrossSectionalMomentum
 
 log = logging.getLogger(__name__)
 
@@ -341,9 +339,11 @@ class Runner:
         # Cross-sectional and funding strategies need universe-wide context
         # before any single symbol can be scored.
         for strategy, _ in self.strategies:
-            if isinstance(strategy, CrossSectionalMomentum):
+            # hasattr, not isinstance: a strategy may be wrapped (e.g. by
+            # Inverted), and the wrapper forwards these through.
+            if hasattr(strategy, "rank_universe"):
                 strategy.rank_universe(frames)
-            elif isinstance(strategy, FundingCarry):
+            elif hasattr(strategy, "set_funding"):
                 strategy.set_funding(self.market.funding_rates())
 
         orders: list[SizedOrder] = []

@@ -141,13 +141,14 @@ def walk_forward(
     grid: dict[str, Iterable] | None = None,
     folds: int = 4,
     train_frac: float = 0.6,
+    invert: bool = False,
 ) -> WalkForwardResult:
     """Tune on each fold's training window, then measure on the window after it.
 
     Folds are anchored and rolling forward, never overlapping train and test,
     so no fold is ever scored on data its parameters saw.
     """
-    if strategy_name == FundingCarry.name:
+    if strategy_name.removeprefix("inverted_") == FundingCarry.name:
         # Refuse rather than quietly report "no edge". This strategy trades on
         # funding, and Hyperliquid serves no per-asset historical funding
         # series -- so every bar would abstain and the run would look like a
@@ -163,7 +164,7 @@ def walk_forward(
     timeline = sorted(set().union(*(df.index for df in frames.values())))
     n = len(timeline)
 
-    warmup = build_strategy(strategy_name).warmup_bars
+    warmup = build_strategy(strategy_name, invert=invert).warmup_bars
     fold_size = n // folds
     train_size = int(fold_size * train_frac)
     test_size = fold_size - train_size
@@ -185,7 +186,7 @@ def walk_forward(
 
         best = None
         for params in combos:
-            train_result = _run(cfg, frames, strategy_name, params, *train_span)
+            train_result = _run(cfg, frames, strategy_name, params, *train_span, invert)
             if train_result is None:
                 continue
             ret, sharpe, _ = _score(train_result)
@@ -199,7 +200,7 @@ def walk_forward(
             continue
 
         params, train_sharpe, train_return = best
-        test_result = _run(cfg, frames, strategy_name, params, *test_span)
+        test_result = _run(cfg, frames, strategy_name, params, *test_span, invert)
         if test_result is None:
             continue
         test_return, test_sharpe, trades = _score(test_result)
@@ -224,10 +225,11 @@ def walk_forward(
             params,
         )
 
-    return WalkForwardResult(folds=results, strategy=strategy_name)
+    label = f"inverted_{strategy_name}" if invert else strategy_name
+    return WalkForwardResult(folds=results, strategy=label)
 
 
-def _run(cfg, frames, strategy_name, params, start, end):
+def _run(cfg, frames, strategy_name, params, start, end, invert=False):
     window = {
         symbol: df.loc[start:end]
         for symbol, df in frames.items()
@@ -235,7 +237,7 @@ def _run(cfg, frames, strategy_name, params, start, end):
     }
     if not window:
         return None
-    strategy = build_strategy(strategy_name, params)
+    strategy = build_strategy(strategy_name, params, invert=invert)
     try:
         return Backtester(cfg, [(strategy, 1.0)]).run(window)
     except ValueError:

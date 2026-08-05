@@ -60,12 +60,27 @@ Momentum matters most here: it contributed **+$3,030 of the +$3,504** in the
 of sample it loses money. That single comparison is the best argument in this
 repo for not trusting a backtest.
 
-`mean_reversion` fails differently, and the distinction is worth understanding.
-Its overfit gap is only 4.4% — it is *not* fitted to history. It loses roughly
-as much in sample as out. That is an honestly bad strategy rather than a
-flattering one, and it is the easier of the two problems: a strategy that is
-consistently wrong may just have its sign or its regime filter backwards,
-whereas one with a 26% overfit gap is telling you the search itself is broken.
+`mean_reversion` fails differently, and the distinction was worth chasing. Its
+overfit gap is only 4.4% — it is *not* fitted to history, it loses about as
+much in sample as out. That raised an obvious hypothesis: a strategy that is
+steadily wrong may simply be reading a real signal backwards.
+
+So I tested it, which is what `--invert` is for:
+
+```
+walk-forward: inverted_mean_reversion
+mean out-of-sample return ....   -12.6%
+profitable folds .............       0%
+```
+
+**The inverse loses more than the original.** That refutes the hypothesis and
+settles the question: if both a signal and its opposite lose money, the signal
+carries no information, and what you are measuring is the cost of trading.
+There is no sign error to fix here and no edge hiding behind one.
+
+This is the most useful thing in this README. A negative result that closes off
+a line of enquiry is worth more than another backtest that looks encouraging,
+and it took about twenty minutes rather than a funded month.
 
 The verdict the tool printed for all three was "no edge. Do not trade this,"
 and I agree with it.

@@ -124,6 +124,11 @@ class Backtester:
 
         # Signals decided on bar i are executed at bar i+1's open.
         pending: list = []
+        # Strategies see exactly the same window here as the live runner gives
+        # them, so an indicator computes to the same value in both. A backtest
+        # that feeds strategies more history than live ever will is measuring
+        # a system nobody is going to run.
+        window = max(self.cfg.lookback_bars, warmup + 50)
 
         for i in range(warmup, len(timeline) - 1):
             now: datetime = timeline[i]
@@ -153,8 +158,13 @@ class Backtester:
                     self._flatten(portfolio, bars, now, "hard halt")
                 continue
 
+            # Hand strategies a bounded window, not the whole history. They
+            # only ever look back `warmup_bars`, and recomputing indicators
+            # over an ever-growing frame makes the backtest quadratic --
+            # slow enough that nobody runs the parameter sweeps that actually
+            # matter.
             history = {
-                symbol: df.loc[:now]
+                symbol: df.loc[:now].iloc[-window:]
                 for symbol, df in frames.items()
                 if now in df.index
             }

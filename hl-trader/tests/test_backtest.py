@@ -111,6 +111,29 @@ def test_appending_future_data_does_not_change_the_past(universe):
     assert entries(short_run) == entries(long_run)
 
 
+def test_strategies_see_the_same_window_the_live_runner_gives_them(universe):
+    """Backtest and live must feed strategies identically.
+
+    If the backtest hands strategies more history than the runner ever will,
+    an EMA settles differently in each and the backtest is measuring a system
+    that will never actually run.
+    """
+    seen: list[int] = []
+    real = build_strategy("trend_breakout")
+
+    class Spy(type(real)):
+        def generate(self, symbol, df):
+            seen.append(len(df))
+            return super().generate(symbol, df)
+
+    cfg = make_config()
+    cfg.lookback_bars = 400
+    Backtester(cfg, [(Spy(), 1.0)]).run(universe)
+
+    assert seen, "the strategy was never consulted"
+    assert max(seen) <= max(cfg.lookback_bars, real.warmup_bars + 50)
+
+
 def test_orders_fill_on_the_next_bar_not_the_signal_bar():
     """Filling at the signal bar's close is the classic backtest lie."""
     # A clean staircase: flat, then a decisive breakout.

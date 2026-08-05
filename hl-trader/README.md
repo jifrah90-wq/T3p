@@ -40,15 +40,23 @@ out-of-sample, that is a good outcome. It is not a 10x in a month.
 
 | run | result |
 |---|---|
-| 120 days, 6 symbols | **-15.3%**, 74 trades |
-| 200 days, 18 symbols | **+35.0%**, Sharpe 1.40, 49 trades |
-| **walk-forward, 3 folds, out of sample** | **-10.9% mean, 0 of 3 folds profitable** |
+| backtest, 120 days, 6 symbols | **-15.3%**, 74 trades |
+| backtest, 200 days, 18 symbols | **+35.0%**, Sharpe 1.40, 49 trades |
+| **walk-forward `trend_breakout`, 3 folds** | **-10.9% mean OOS, 0/3 folds profitable, 26.1% overfit gap** |
+| **walk-forward `momentum`, 3 folds** | **-4.9% mean OOS, 1/3 folds profitable, 21.4% overfit gap** |
 
-The middle row is the one that would tempt you. Ignore it. The walk-forward run
-tuned parameters on each fold's training window and then scored that choice on
-the window immediately after — and fold 0 trained to **+65.8%** and delivered
-**-1.4%**. Mean overfit gap: **26.1%**. That is the signature of curve fitting,
-not alpha. The verdict the tool printed was "no edge. Do not trade this," and I
+The +35% row is the one that would tempt you. Ignore it. Walk-forward tuned
+parameters on each fold's training window and scored that choice on the window
+immediately after — and `trend_breakout` fold 0 trained to **+65.8%** and
+delivered **-1.4%**. Both strategies show a >20% train-to-test gap. That is the
+signature of curve fitting, not alpha.
+
+Momentum matters most here: it contributed **+$3,030 of the +$3,504** in the
+200-day backtest, which made it look like the engine of the whole result. Out
+of sample it loses money. That single comparison is the best argument in this
+repo for not trusting a backtest.
+
+The verdict the tool printed for both was "no edge. Do not trade this," and I
 agree with it.
 
 The swing between -15% and +35% depending on which symbols and window you pick
